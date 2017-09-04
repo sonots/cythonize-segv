@@ -6,29 +6,34 @@ import sys
 from distutils.command.sdist import sdist
 from distutils.command.build_ext import build_ext
 from setuptools import setup, Extension
-import Cython.Compiler.Main as cython_compiler
 
 setup_requires = ['fastrlock>=0.3']
 install_requires = ['fastrlock>=0.3']
 
-def cythonize(src):
-    sys.stderr.write("cythonize: %r\n" % (src,))
-    cython_compiler.compile([src], cplus=True)
+pyx_ext_modules = [Extension('segv._segv',
+                         sources=['segv/_segv.pyx'],
+                         libraries=[],
+                         include_dirs=[],
+                         define_macros=[])]
+ext_modules = [Extension('segv._segv',
+                         sources=['segv/_segv.cpp'],
+                         libraries=[],
+                         include_dirs=[],
+                         define_macros=[])]
 
 class BuildExt(build_ext):
-    def build_extension(self, ext):
-        return build_ext.build_extension(self, ext)
+    def run(self):
+        import Cython
+        import Cython.Build
+        Cython.Build.cythonize(pyx_ext_modules, verbose=True)
+        build_ext.run(self)
 
 class Sdist(sdist):
     def __init__(self, *args, **kwargs):
-        cythonize('segv/_segv.pyx')
+        import Cython
+        import Cython.Build
+        Cython.Build.cythonize(pyx_ext_modules, verbose=True)
         sdist.__init__(self, *args, **kwargs)
-
-ext_modules = [Extension('segv._segv',
-                         sources=['segv/_segv.cpp'],
-                         libraries=[''],
-                         include_dirs=[''],
-                         define_macros=[''])]
 
 setup(
     name='segv',
@@ -37,6 +42,7 @@ setup(
     author='sonots',
     author_email='sonots@gmail.com',
     packages=['segv'],
+    zip_safe=False,
     setup_requires=setup_requires,
     install_requires=install_requires,
     ext_modules=ext_modules,
